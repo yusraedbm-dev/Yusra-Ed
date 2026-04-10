@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --color-primary: var(--primary-color, #f97316);
+  --color-primary-light: var(--primary-color-light, rgba(249, 115, 22, 0.2));
+}
+
+@layer base {
+  body {
+    @apply antialiased text-zinc-900 bg-zinc-50 transition-colors duration-300;
+  }
+
+  .dark body {
+    @apply text-zinc-100 bg-zinc-950;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl transition-all;
+  }
+
+  .dark .glass-card {
+    @apply bg-zinc-900/80 border-zinc-800/50;
+  }
+  
+  .btn-primary {
+    @apply px-6 py-3 bg-primary text-white font-bold rounded-2xl hover:brightness-110 shadow-lg shadow-primary-light transition-all active:scale-95;
+  }
+
+  .dark .btn-primary {
+    @apply shadow-primary-light;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-zinc-200 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none transition-all;
+  }
+
+  .dark .input-field {
+    @apply bg-zinc-900 border-zinc-800 text-zinc-100;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scanner-active {
+    --tw-bg-opacity: 0 !important;
+    background-color: transparent !important;
+  }
+
+  .scanner-active body {
+    background-color: transparent !important;
+  }
+
+  .scanner-active #root {
+    display: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zinc-200 rounded-full hover:bg-zinc-300;
+}
+
