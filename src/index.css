@@ -51,17 +51,18 @@
     scrollbar-width: none;
   }
 
-  .scanner-active {
+  .scanner-active, .scanner-active body {
+    background-color: transparent !important;
     --tw-bg-opacity: 0 !important;
-    background-color: transparent !important;
-  }
-
-  .scanner-active body {
-    background-color: transparent !important;
   }
 
   .scanner-active #root {
-    display: none;
+    visibility: hidden;
+  }
+
+  /* Ensure the scanner UI itself remains visible */
+  .scanner-active [class*="fixed"] {
+    visibility: visible !important;
   }
 }
 
