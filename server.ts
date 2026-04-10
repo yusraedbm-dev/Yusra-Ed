@@ -8,57 +8,59 @@ const __dirname = path.dirname(__filename);
 
 export const app = express();
 
-async function startServer() {
-  const PORT = 3000;
+app.use(express.json());
 
-  app.use(express.json());
+// API Routes
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", message: "POS System Backend is running" });
+});
 
-  // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", message: "POS System Backend is running" });
+// Mock Sync Endpoint
+app.post("/api/sync", (req, res) => {
+  const { lastSync, data } = req.body;
+  console.log("Sync request received at:", new Date().toISOString());
+  res.json({ 
+    status: "success", 
+    serverTime: new Date().toISOString(),
+    updates: [] 
   });
+});
 
-  // Mock Sync Endpoint
-  app.post("/api/sync", (req, res) => {
-    const { lastSync, data } = req.body;
-    console.log("Sync request received at:", new Date().toISOString());
-    // In a real app, we would merge data with a database here
-    res.json({ 
-      status: "success", 
-      serverTime: new Date().toISOString(),
-      updates: [] // No updates for now
-    });
+// Stripe Payment Intent Mock
+app.post("/api/create-payment-intent", (req, res) => {
+  const { amount } = req.body;
+  res.json({
+    clientSecret: "mock_secret_" + Math.random().toString(36).substring(7),
+    amount
   });
+});
 
-  // Stripe Payment Intent Mock
-  app.post("/api/create-payment-intent", (req, res) => {
-    const { amount } = req.body;
-    res.json({
-      clientSecret: "mock_secret_" + Math.random().toString(36).substring(7),
-      amount
-    });
-  });
-
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+async function setupVite() {
+  if (process.env.NODE_ENV !== "production" && !process.env.NETLIFY) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.NETLIFY) {
+    // Only serve static files if NOT on Netlify (Netlify handles this via CDN)
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+}
 
-  if (process.env.NODE_ENV !== "production" || !process.env.NETLIFY) {
+// Only start the server if NOT running on Netlify
+if (!process.env.NETLIFY && (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV)) {
+  setupVite().then(() => {
+    const PORT = 3000;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
-  }
+  });
 }
 
-startServer();
+export default app;
