@@ -326,7 +326,6 @@ export default function Inventory() {
                     <input 
                       type="file" 
                       accept="image/*"
-                      capture="environment"
                       className="hidden"
                       id="product-image"
                       onChange={(e) => {

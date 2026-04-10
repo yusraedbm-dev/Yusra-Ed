@@ -39,12 +39,14 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           onScan(result.content);
           handleClose();
         }
-      } else if (status.denied) {
-        setError('Camera permission denied. Please enable it in settings.');
+      } else {
+        // If native permission fails, we'll fall back to web scanner
+        // which now has the WebChromeClient fix in MainActivity.java
+        console.warn('Native camera permission denied, falling back to web scanner');
       }
     } catch (err) {
       console.error('Native Scan Error:', err);
-      setError('Failed to start native scanner');
+      // Fallback to web scanner on error
       document.body.classList.remove('scanner-active');
     }
   };
@@ -80,19 +82,25 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
       {/* Camera View Area */}
       <div className="flex-1 relative flex items-center justify-center">
-        {isNative ? (
-          // Native scanner shows camera in background, we just show a guide
+        {isNative && !error ? (
+          // Native scanner guide
           <div className="w-64 h-64 border-2 border-white/50 rounded-3xl animate-pulse shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"></div>
         ) : (
-          // Web fallback
-          <div className="w-full h-full">
+          // Web scanner (Fallback for Android/iOS if native fails, or for Web)
+          <div className="w-full h-full bg-black">
             <BarcodeScannerComponent
               width="100%"
               height="100%"
+              videoConstraints={{
+                facingMode: 'environment'
+              }}
               onUpdate={(err, result) => {
                 if (result) {
                   onScan(result.getText());
                   handleClose();
+                }
+                if (err && err instanceof Error && !err.message.includes('NotFound')) {
+                  setError(err.message);
                 }
               }}
             />
@@ -106,7 +114,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       {/* Minimal Status Text */}
       <div className="absolute bottom-12 left-0 right-0 text-center px-6">
         <p className="text-white/70 font-medium text-sm tracking-wide">
-          {error || 'Align QR code within the frame'}
+          {error || (isNative ? 'Starting hardware camera...' : 'Align QR code within the frame')}
         </p>
       </div>
     </div>
