@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { db, User } from '../db';
 import { Lock, User as UserIcon, ArrowRight } from 'lucide-react';
+import { Logo } from './Logo';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 
@@ -52,13 +53,11 @@ export default function Login({ onLogin }: LoginProps) {
       >
         <div className="p-8 lg:p-12">
           <div className="flex justify-center mb-8">
-            <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
-              <Lock size={40} />
-            </div>
+            <Logo className="w-20 h-20" color="var(--primary-color)" />
           </div>
           
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 mb-2">Secure Access</h1>
+            <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-100 mb-2">YusraPOS</h1>
             <p className="text-zinc-500 dark:text-zinc-400">Enter your staff PIN to continue</p>
           </div>
 

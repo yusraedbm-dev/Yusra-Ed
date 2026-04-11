@@ -51,19 +51,32 @@
     scrollbar-width: none;
   }
 
-  .scanner-active, .scanner-active body {
+  .scanner-active, 
+  .scanner-active body,
+  .scanner-active html {
     background-color: transparent !important;
     --tw-bg-opacity: 0 !important;
+    background: transparent !important;
   }
 
   .scanner-active #root {
     visibility: hidden;
+    background: transparent !important;
   }
 
   /* Ensure the scanner UI itself remains visible */
   .scanner-active [class*="fixed"] {
     visibility: visible !important;
   }
+}
+
+@keyframes scan-line {
+  0% { top: 1rem; }
+  100% { top: calc(100% - 1rem); }
+}
+
+.animate-scan-line {
+  animation: scan-line 2s linear infinite;
 }
 
 ::-webkit-scrollbar {

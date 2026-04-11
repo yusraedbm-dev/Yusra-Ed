@@ -21,6 +21,7 @@ import { Toaster, toast } from 'sonner';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, User as UserType } from './db';
 import { SyncService } from './SyncService';
+import { Logo, LogoFull } from './components/Logo';
 
 // Views
 import Dashboard from './components/Dashboard';
@@ -153,14 +154,14 @@ export default function App() {
         <div className="p-6 flex items-center justify-between">
           <AnimatePresence mode="wait">
             {isSidebarOpen && (
-              <motion.h1 
+              <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="font-bold text-xl tracking-tight text-zinc-900 dark:text-zinc-100 truncate"
+                className="truncate"
               >
-                {settings?.storeName || 'POSPRO'}
-              </motion.h1>
+                <LogoFull color="var(--primary-color)" />
+              </motion.div>
             )}
           </AnimatePresence>
           <button 
@@ -235,8 +236,8 @@ export default function App() {
       <main className="flex-1 overflow-auto pb-20 lg:pb-0">
         <header className="h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-10 transition-colors duration-300">
           <div className="flex items-center gap-3">
-            <div className="lg:hidden font-black text-lg tracking-tighter text-primary">
-              {settings?.storeName?.charAt(0) || 'P'}
+            <div className="lg:hidden">
+              <Logo className="w-8 h-8" color="var(--primary-color)" />
             </div>
             <h2 className="text-base lg:text-lg font-bold text-zinc-800 dark:text-zinc-100 capitalize">
               {activeView.replace('-', ' ')}
@@ -250,13 +251,6 @@ export default function App() {
               </div>
             )}
             
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-600 dark:text-zinc-400"
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold border border-primary/20 text-primary">
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </div>

@@ -101,7 +101,7 @@ export async function seedData() {
   const settingsCount = await db.settings.count();
   if (settingsCount === 0) {
     await db.settings.add({
-      storeName: 'POSPRO',
+      storeName: 'YusraPOS',
       primaryColor: '#f97316', // orange-600
       currency: 'PHP',
       goldPricePerGram: 3800 // Approximate PHP price per gram of 24k gold
