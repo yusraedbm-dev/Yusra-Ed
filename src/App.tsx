@@ -11,8 +11,6 @@ import {
   Moon,
   Sun,
   LogOut,
-  Wifi,
-  WifiOff,
   Building2,
   History
 } from 'lucide-react';
@@ -39,7 +37,6 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [activeView, setActiveView] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
     return saved ? JSON.parse(saved) : true; // Default to dark as requested
@@ -118,7 +115,7 @@ export default function App() {
   if (!currentUser) {
     return (
       <div className="transition-colors duration-300">
-        <Toaster position="top-right" theme={isDarkMode ? 'dark' : 'light'} />
+        <Toaster position="bottom-right" theme={isDarkMode ? 'dark' : 'light'} />
         <Login onLogin={setCurrentUser} />
       </div>
     );
@@ -126,7 +123,7 @@ export default function App() {
 
   return (
     <div className={`flex h-screen ${isDarkMode ? 'dark' : ''} bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans overflow-hidden transition-colors duration-300`}>
-      <Toaster position="top-right" theme={isDarkMode ? 'dark' : 'light'} />
+      <Toaster position="bottom-right" theme={isDarkMode ? 'dark' : 'light'} />
       
       {/* Desktop Sidebar */}
       <motion.aside 
@@ -208,7 +205,7 @@ export default function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto pb-20 lg:pb-0">
+      <main className="flex-1 overflow-auto pb-20 lg:pb-0 relative">
         <header className="h-16 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-10 transition-colors duration-300">
           <div className="flex items-center gap-3">
             <div className="lg:hidden">
@@ -238,6 +235,27 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Floating POS Button */}
+        <AnimatePresence>
+          {activeView !== 'sales' && (
+            <motion.button
+              initial={{ scale: 0, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0, opacity: 0, y: 20 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setActiveView('sales')}
+              className="fixed bottom-24 lg:bottom-8 right-6 lg:right-8 w-14 h-14 lg:w-16 lg:h-16 bg-primary text-white rounded-full shadow-2xl shadow-primary-light flex items-center justify-center z-40 group transition-all"
+              title="Open Point of Sale"
+            >
+              <ShoppingCart size={24} className="lg:w-7 lg:h-7" />
+              <span className="absolute right-full mr-3 px-3 py-1.5 bg-zinc-900 text-white text-xs font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+                Open POS
+              </span>
+            </motion.button>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

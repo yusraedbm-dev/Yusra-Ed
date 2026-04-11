@@ -100,6 +100,9 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     // Send to POS
     onScan(code);
     toast.success(`Scanned: ${code}`, { duration: 1000 });
+    
+    // Close after successful scan as requested (remove continuous scan)
+    handleClose();
   };
 
   const startWebScanner = async (cameraId: string) => {
@@ -202,17 +205,13 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         document.documentElement.classList.add('scanner-active');
         setIsScanning(true);
         
-        // Loop for continuous scanning
-        while (scanActive.current) {
-          const result = await BarcodeScanner.startScan({
-            targetedFormats: [SupportedFormat.QR_CODE, SupportedFormat.EAN_13, SupportedFormat.EAN_8, SupportedFormat.CODE_128]
-          });
-          
-          if (result.hasContent && scanActive.current) {
-            handleScanResult(result.content);
-            // Small delay before next scan to prevent CPU hogging
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
+        // Single scan instead of continuous loop
+        const result = await BarcodeScanner.startScan({
+          targetedFormats: [SupportedFormat.QR_CODE, SupportedFormat.EAN_13, SupportedFormat.EAN_8, SupportedFormat.CODE_128]
+        });
+        
+        if (result.hasContent && scanActive.current) {
+          handleScanResult(result.content);
         }
       } else {
         setError('Camera permission denied');
@@ -341,7 +340,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         <div className="max-w-md mx-auto space-y-4">
           <div className="flex flex-col items-center gap-1 mb-2">
             <p className="text-white font-bold text-sm tracking-widest uppercase">
-              {isNative ? 'Continuous Hardware Scan' : 'Web Scanner Active'}
+              {isNative ? 'Hardware Scanner' : 'Web Scanner Active'}
             </p>
             <p className="text-white/40 text-[10px] text-center uppercase tracking-wider">
               {isScanning ? 'Align barcode within the frame' : 'Preparing camera...'}

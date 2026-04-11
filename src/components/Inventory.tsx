@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { 
   Plus, 
+  Minus,
   Search, 
   Filter, 
   MoreVertical, 
@@ -32,6 +33,20 @@ export default function Inventory() {
   const [isScanning, setIsScanning] = useState(false);
 
   const currency = settings?.currency || 'PHP';
+
+  const updateStock = async (productId: number, delta: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    try {
+      await db.products.update(productId, {
+        stock: Math.max(0, product.stock + delta),
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      toast.error('Failed to update stock');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -171,11 +186,25 @@ export default function Inventory() {
                 <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{product.name}</div>
                 <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">#{product.barcode || 'NO-BARCODE'}</div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                    product.stock < 10 ? 'bg-primary/10 text-primary' : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                  }`}>
-                    {product.stock} in stock
-                  </span>
+                  <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-800 p-1 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); updateStock(product.id!, -1); }}
+                      className="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-colors text-zinc-600 dark:text-zinc-400"
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <span className={`px-2 text-[10px] font-bold uppercase ${
+                      product.stock < 10 ? 'text-primary' : 'text-green-700 dark:text-green-400'
+                    }`}>
+                      {product.stock}
+                    </span>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); updateStock(product.id!, 1); }}
+                      className="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-colors text-zinc-600 dark:text-zinc-400"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
                   <span className="text-sm font-bold text-primary">{formatCurrency(product.price)}</span>
                 </div>
               </div>
@@ -228,9 +257,23 @@ export default function Inventory() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className={`text-sm font-bold ${product.stock < 10 ? 'text-primary' : 'text-zinc-900 dark:text-zinc-100'}`}>
-                        {product.stock}
-                      </span>
+                      <div className="flex items-center gap-2 bg-zinc-50 dark:bg-zinc-800 p-1 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                        <button 
+                          onClick={() => updateStock(product.id!, -1)}
+                          className="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-colors text-zinc-600 dark:text-zinc-400"
+                        >
+                          <Minus size={12} />
+                        </button>
+                        <span className={`text-sm font-bold w-8 text-center ${product.stock < 10 ? 'text-primary' : 'text-zinc-900 dark:text-zinc-100'}`}>
+                          {product.stock}
+                        </span>
+                        <button 
+                          onClick={() => updateStock(product.id!, 1)}
+                          className="p-1 hover:bg-white dark:hover:bg-zinc-700 rounded-md transition-colors text-zinc-600 dark:text-zinc-400"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
                       {product.stock < 10 && <AlertCircle size={14} className="text-primary" />}
                     </div>
                   </td>

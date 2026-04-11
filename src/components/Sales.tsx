@@ -82,13 +82,18 @@ export default function Sales({ currentUser }: SalesProps) {
   };
 
   const updateQuantity = (productId: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === productId) {
-        const newQty = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQty };
+    setCart(prev => {
+      const item = prev.find(i => i.id === productId);
+      if (item && item.quantity + delta <= 0) {
+        return prev.filter(i => i.id !== productId);
       }
-      return item;
-    }));
+      return prev.map(item => {
+        if (item.id === productId) {
+          return { ...item, quantity: item.quantity + delta };
+        }
+        return item;
+      });
+    });
   };
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -229,26 +234,55 @@ export default function Sales({ currentUser }: SalesProps) {
 
           <div className="flex-1 overflow-y-auto pr-1 lg:pr-2">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4">
-              {filteredProducts.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  className="bg-white dark:bg-zinc-900 p-3 lg:p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-primary dark:hover:border-primary hover:shadow-md transition-all text-left group"
-                >
-                  <div className="aspect-square bg-zinc-50 dark:bg-zinc-800 rounded-xl mb-2 lg:mb-3 flex items-center justify-center overflow-hidden border border-zinc-100 dark:border-zinc-800">
-                    {product.image ? (
-                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <ShoppingCart size={20} className="text-zinc-300 dark:text-zinc-600 group-hover:text-primary transition-colors" />
-                    )}
+              {filteredProducts.map((product) => {
+                const cartItem = cart.find(item => item.id === product.id);
+                return (
+                  <div
+                    key={product.id}
+                    className="bg-white dark:bg-zinc-900 p-3 lg:p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all text-left group flex flex-col"
+                  >
+                    <div className="aspect-square bg-zinc-50 dark:bg-zinc-800 rounded-xl mb-2 lg:mb-3 flex items-center justify-center overflow-hidden border border-zinc-100 dark:border-zinc-800">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ShoppingCart size={20} className="text-zinc-300 dark:text-zinc-600 group-hover:text-primary transition-colors" />
+                      )}
+                    </div>
+                    <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate text-sm">{product.name}</div>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="text-primary font-bold text-xs lg:text-sm">{formatCurrency(product.price)}</div>
+                      <div className="text-[9px] lg:text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase">{product.stock} in stock</div>
+                    </div>
+                    
+                    <div className="mt-3">
+                      {cartItem ? (
+                        <div className="flex items-center justify-between bg-primary/10 rounded-xl p-1 border border-primary/20">
+                          <button 
+                            onClick={() => updateQuantity(product.id!, -1)}
+                            className="p-1.5 hover:bg-white dark:hover:bg-zinc-800 rounded-lg transition-colors text-primary"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="font-bold text-primary text-sm">{cartItem.quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(product.id!, 1)}
+                            className="p-1.5 hover:bg-white dark:hover:bg-zinc-800 rounded-lg transition-colors text-primary"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => addToCart(product)}
+                          className="w-full py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold rounded-xl text-xs hover:bg-primary hover:text-white transition-all"
+                        >
+                          Add to Cart
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="font-bold text-zinc-900 dark:text-zinc-100 truncate text-sm">{product.name}</div>
-                  <div className="flex items-center justify-between mt-1">
-                    <div className="text-primary font-bold text-xs lg:text-sm">{formatCurrency(product.price)}</div>
-                    <div className="text-[9px] lg:text-[10px] text-zinc-400 dark:text-zinc-500 font-bold uppercase">{product.stock} in stock</div>
-                  </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

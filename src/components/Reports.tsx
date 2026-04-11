@@ -16,7 +16,6 @@ import { db, Product, Sale } from '../db';
 import { toast } from 'sonner';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import { 
   BarChart, 
   Bar, 
@@ -103,45 +102,6 @@ export default function Reports() {
 
   const COLORS = ['var(--primary-color)', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-  const handleDownloadSpreadsheet = () => {
-    try {
-      // 1. Sales Data
-      const salesData = sales.map(s => ({
-        ID: s.id,
-        Date: new Date(s.timestamp).toLocaleString(),
-        Total: s.total,
-        Payment: s.paymentMethod,
-        Items: s.items.map(i => `${i.name} (x${i.quantity})`).join(', ')
-      }));
-
-      // 2. Inventory Data
-      const inventoryData = products.map(p => ({
-        Name: p.name,
-        SKU: p.sku,
-        Barcode: p.barcode || 'N/A',
-        Category: p.category,
-        Stock: p.stock,
-        Cost: p.cost,
-        Price: p.price,
-        'Total Cost Value': p.cost * p.stock,
-        'Total Retail Value': p.price * p.stock
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const wsSales = XLSX.utils.json_to_sheet(salesData);
-      const wsInventory = XLSX.utils.json_to_sheet(inventoryData);
-
-      XLSX.utils.book_append_sheet(wb, wsSales, "Sales");
-      XLSX.utils.book_append_sheet(wb, wsInventory, "Inventory");
-
-      XLSX.writeFile(wb, `YusraPOS_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
-      toast.success('Spreadsheet downloaded successfully');
-    } catch (error) {
-      console.error('Spreadsheet error:', error);
-      toast.error('Failed to generate spreadsheet');
-    }
-  };
-
   const handleDownloadPDF = () => {
     try {
       const doc = new jsPDF();
@@ -190,11 +150,6 @@ export default function Reports() {
     }
   };
 
-  const handleDownloadReport = () => {
-    // Default to CSV for backward compatibility or just call spreadsheet
-    handleDownloadSpreadsheet();
-  };
-
   return (
     <div className="space-y-6 lg:space-y-8">
       {/* Header */}
@@ -221,20 +176,12 @@ export default function Reports() {
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={handleDownloadSpreadsheet}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-xs font-bold"
-              title="Download Spreadsheet"
-            >
-              <Download size={16} />
-              Excel
-            </button>
-            <button 
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-xs font-bold"
-              title="Download PDF"
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:brightness-110 transition-all text-xs font-bold shadow-lg shadow-primary-light"
+              title="Download PDF Report"
             >
               <Download size={16} />
-              PDF
+              Download PDF Report
             </button>
           </div>
         </div>
