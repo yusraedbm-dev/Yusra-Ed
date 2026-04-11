@@ -2,6 +2,11 @@ package com.sophisticated.pos;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.RelativeLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
@@ -17,17 +22,46 @@ public class ScannerActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        barcodeView = new DecoratedBarcodeView(this);
-        setContentView(barcodeView);
+        // Create layout programmatically
+        FrameLayout root = new FrameLayout(this);
+        root.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Tap to close functionality
-        barcodeView.setOnClickListener(v -> finish());
+        barcodeView = new DecoratedBarcodeView(this);
+        barcodeView.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(barcodeView);
+
+        // Add a Close button at the bottom
+        RelativeLayout overlay = new RelativeLayout(this);
+        overlay.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        
+        Button closeButton = new Button(this);
+        closeButton.setText("Close Scanner");
+        closeButton.setAllCaps(true);
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        lp.setMargins(0, 0, 0, 100);
+        closeButton.setLayoutParams(lp);
+        closeButton.setOnClickListener(v -> finish());
+        
+        overlay.addView(closeButton);
+        root.addView(overlay);
+
+        setContentView(root);
 
         barcodeView.decodeContinuous(new BarcodeCallback() {
             @Override
             public void barcodeResult(BarcodeResult result) {
                 String code = result.getText();
-                if (code == null) return;
+                if (code == null || code.isEmpty()) return;
 
                 long currentTime = System.currentTimeMillis();
 

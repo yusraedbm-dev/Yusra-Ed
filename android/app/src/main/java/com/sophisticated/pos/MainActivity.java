@@ -52,7 +52,11 @@ public class MainActivity extends BridgeActivity {
         }, 1);
 
         // Register scan receiver
-        registerReceiver(scanReceiver, new IntentFilter("SCAN_RESULT"));
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(scanReceiver, new IntentFilter("SCAN_RESULT"), Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(scanReceiver, new IntentFilter("SCAN_RESULT"));
+        }
     }
 
     @Override
