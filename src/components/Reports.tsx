@@ -12,8 +12,11 @@ import {
   Wallet,
   Building2
 } from 'lucide-react';
-import { db } from '../db';
+import { db, Product, Sale } from '../db';
 import { toast } from 'sonner';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { 
   BarChart, 
   Bar, 
@@ -100,23 +103,96 @@ export default function Reports() {
 
   const COLORS = ['var(--primary-color)', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-  const handleDownloadReport = () => {
-    const headers = ['Date', 'Total Sales'];
-    const csvContent = [
-      headers.join(','),
-      ...salesByDay.map(row => `${row.date},${row.sales}`)
-    ].join('\n');
+  const handleDownloadSpreadsheet = () => {
+    try {
+      // 1. Sales Data
+      const salesData = sales.map(s => ({
+        ID: s.id,
+        Date: new Date(s.timestamp).toLocaleString(),
+        Total: s.total,
+        Payment: s.paymentMethod,
+        Items: s.items.map(i => `${i.name} (x${i.quantity})`).join(', ')
+      }));
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `sales_report_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success('Report downloaded successfully');
+      // 2. Inventory Data
+      const inventoryData = products.map(p => ({
+        Name: p.name,
+        SKU: p.sku,
+        Barcode: p.barcode || 'N/A',
+        Category: p.category,
+        Stock: p.stock,
+        Cost: p.cost,
+        Price: p.price,
+        'Total Cost Value': p.cost * p.stock,
+        'Total Retail Value': p.price * p.stock
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const wsSales = XLSX.utils.json_to_sheet(salesData);
+      const wsInventory = XLSX.utils.json_to_sheet(inventoryData);
+
+      XLSX.utils.book_append_sheet(wb, wsSales, "Sales");
+      XLSX.utils.book_append_sheet(wb, wsInventory, "Inventory");
+
+      XLSX.writeFile(wb, `YusraPOS_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+      toast.success('Spreadsheet downloaded successfully');
+    } catch (error) {
+      console.error('Spreadsheet error:', error);
+      toast.error('Failed to generate spreadsheet');
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const dateStr = new Date().toLocaleString();
+
+      // Title
+      doc.setFontSize(20);
+      doc.text('YusraPOS Business Report', 14, 22);
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${dateStr}`, 14, 30);
+
+      // Summary Section
+      doc.setFontSize(14);
+      doc.text('Business Summary', 14, 45);
+      doc.setFontSize(10);
+      doc.text(`Total Revenue: ${formatCurrency(totalRevenue)}`, 14, 55);
+      doc.text(`Total Profit: ${formatCurrency(totalProfit)}`, 14, 62);
+      doc.text(`Total Inventory Value (Cost): ${formatCurrency(products.reduce((acc, p) => acc + (p.cost * p.stock), 0))}`, 14, 69);
+
+      // Inventory Table
+      doc.setFontSize(14);
+      doc.text('Current Inventory Status', 14, 85);
+      
+      const inventoryRows = products.map(p => [
+        p.name,
+        p.sku,
+        p.stock.toString(),
+        formatCurrency(p.cost),
+        formatCurrency(p.price),
+        formatCurrency(p.cost * p.stock)
+      ]);
+
+      (doc as any).autoTable({
+        startY: 90,
+        head: [['Product', 'SKU', 'Stock', 'Cost', 'Price', 'Value (Cost)']],
+        body: inventoryRows,
+        theme: 'striped',
+        headStyles: { fillColor: [249, 115, 22] } // primary color
+      });
+
+      doc.save(`YusraPOS_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF Report downloaded successfully');
+    } catch (error) {
+      console.error('PDF error:', error);
+      toast.error('Failed to generate PDF');
+    }
+  };
+
+  const handleDownloadReport = () => {
+    // Default to CSV for backward compatibility or just call spreadsheet
+    handleDownloadSpreadsheet();
   };
 
   return (
@@ -143,12 +219,24 @@ export default function Reports() {
               </button>
             ))}
           </div>
-          <button 
-            onClick={handleDownloadReport}
-            className="p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-          >
-            <Download size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleDownloadSpreadsheet}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-xs font-bold"
+              title="Download Spreadsheet"
+            >
+              <Download size={16} />
+              Excel
+            </button>
+            <button 
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-xs font-bold"
+              title="Download PDF"
+            >
+              <Download size={16} />
+              PDF
+            </button>
+          </div>
         </div>
       </div>
 

@@ -154,6 +154,7 @@ export default function Transactions() {
                 <th className="px-6 py-4 font-semibold">Date & Time</th>
                 <th className="px-6 py-4 font-semibold">Customer/Creditor</th>
                 <th className="px-6 py-4 font-semibold">Method</th>
+                <th className="px-6 py-4 font-semibold">Processed By</th>
                 <th className="px-6 py-4 font-semibold">Total</th>
                 <th className="px-6 py-4 font-semibold text-right">Details</th>
               </tr>
@@ -181,6 +182,11 @@ export default function Transactions() {
                       }`}>
                         {sale.paymentMethod}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                        {sale.processedBy || 'System'}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-black text-zinc-900 dark:text-zinc-100">{formatCurrency(sale.total)}</div>
@@ -242,6 +248,12 @@ export default function Transactions() {
                     </span>
                   </div>
                 </div>
+                {sales.find(s => s.id === selectedSaleId)?.processedBy && (
+                  <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                    <span>Processed By</span>
+                    <span>{sales.find(s => s.id === selectedSaleId)?.processedBy}</span>
+                  </div>
+                )}
               </div>
               <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800">
                 <button 

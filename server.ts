@@ -1,7 +1,9 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,17 +15,6 @@ app.use(express.json());
 // API Routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "POS System Backend is running" });
-});
-
-// Mock Sync Endpoint
-app.post("/api/sync", (req, res) => {
-  const { lastSync, data } = req.body;
-  console.log("Sync request received at:", new Date().toISOString());
-  res.json({ 
-    status: "success", 
-    serverTime: new Date().toISOString(),
-    updates: [] 
-  });
 });
 
 // Stripe Payment Intent Mock
@@ -44,7 +35,6 @@ async function setupVite() {
     });
     app.use(vite.middlewares);
   } else if (!process.env.NETLIFY) {
-    // Only serve static files if NOT on Netlify (Netlify handles this via CDN)
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
@@ -53,7 +43,6 @@ async function setupVite() {
   }
 }
 
-// Only start the server if NOT running on Netlify
 if (!process.env.NETLIFY && (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV)) {
   setupVite().then(() => {
     const PORT = 3000;

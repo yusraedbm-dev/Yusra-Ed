@@ -20,7 +20,6 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Toaster, toast } from 'sonner';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, User as UserType } from './db';
-import { SyncService } from './SyncService';
 import { Logo, LogoFull } from './components/Logo';
 
 // Views
@@ -33,6 +32,7 @@ import SettingsView from './components/Settings';
 import Login from './components/Login';
 import Accounts from './components/Accounts';
 import Transactions from './components/Transactions';
+import Categories from './components/Categories';
 
 export default function App() {
   const settings = useLiveQuery(() => db.settings.toCollection().first());
@@ -55,27 +55,8 @@ export default function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    SyncService.startAutoSync();
-    
     // Clear Zakat history on app startup as requested
     db.zakat.clear();
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      toast.success('Back online! Syncing data...');
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-      toast.error('Working offline. Changes will sync later.');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
   useEffect(() => {
@@ -102,6 +83,7 @@ export default function App() {
     { id: 'sales', label: 'Point of Sale', icon: ShoppingCart, roles: ['admin', 'cashier'] },
     { id: 'transactions', label: 'Transactions', icon: History, roles: ['admin', 'cashier'] },
     { id: 'inventory', label: 'Inventory', icon: Package, roles: ['admin'] },
+    { id: 'categories', label: 'Categories', icon: Settings, roles: ['admin'] },
     { id: 'accounts', label: 'Accounts & Debt', icon: Users, roles: ['admin', 'cashier'] },
     { id: 'zakat', label: 'Zakat System', icon: Calculator, roles: ['admin'] },
     { id: 'reports', label: 'Reports', icon: LayoutDashboard, roles: ['admin'] },
@@ -116,8 +98,9 @@ export default function App() {
     switch (activeView) {
       case 'dashboard': return <Dashboard onViewAllTransactions={() => setActiveView('transactions')} />;
       case 'inventory': return <Inventory />;
+      case 'categories': return <Categories />;
       case 'accounts': return <Accounts />;
-      case 'sales': return <Sales />;
+      case 'sales': return <Sales currentUser={currentUser!} />;
       case 'transactions': return <Transactions />;
       case 'zakat': return <Zakat />;
       case 'reports': return <Reports />;
@@ -190,14 +173,6 @@ export default function App() {
         </nav>
 
         <div className="p-4 border-t border-zinc-100 dark:border-zinc-800">
-          <div className={`flex items-center p-3 rounded-xl ${isOnline ? 'text-green-600' : 'text-orange-600'}`}>
-            {isOnline ? <Wifi size={18} /> : <WifiOff size={18} />}
-            {isSidebarOpen && (
-              <span className="ml-3 text-xs font-semibold uppercase tracking-wider">
-                {isOnline ? 'Cloud Synced' : 'Offline Mode'}
-              </span>
-            )}
-          </div>
           <button 
             onClick={handleLogout}
             className="w-full flex items-center p-3 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
@@ -244,13 +219,6 @@ export default function App() {
             </h2>
           </div>
           <div className="flex items-center gap-2 lg:gap-4">
-            {!isOnline && (
-              <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase">
-                <WifiOff size={12} />
-                Offline
-              </div>
-            )}
-            
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold border border-primary/20 text-primary">
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </div>

@@ -26,7 +26,7 @@ export interface Sale {
   paymentMethod: 'cash' | 'card' | 'stripe' | 'credit';
   customerId?: number;
   timestamp: number;
-  syncStatus: 'pending' | 'synced';
+  processedBy?: string; // User name or ID
 }
 
 export interface Customer {
@@ -65,6 +65,12 @@ export interface User {
   createdAt: number;
 }
 
+export interface Category {
+  id?: number;
+  name: string;
+  createdAt: number;
+}
+
 export class POSDatabase extends Dexie {
   products!: Table<Product>;
   sales!: Table<Sale>;
@@ -72,16 +78,18 @@ export class POSDatabase extends Dexie {
   zakat!: Table<ZakatRecord>;
   settings!: Table<AppSettings>;
   users!: Table<User>;
+  categories!: Table<Category>;
 
   constructor() {
     super('POSDatabase');
-    this.version(5).stores({
+    this.version(8).stores({
       products: '++id, sku, name, category, barcode',
-      sales: '++id, timestamp, syncStatus',
+      sales: '++id, timestamp, processedBy',
       customers: '++id, phone, email',
       zakat: '++id, year',
       settings: '++id',
-      users: '++id, pin, role'
+      users: '++id, pin, role',
+      categories: '++id, name'
     });
   }
 }
@@ -112,10 +120,22 @@ export async function seedData() {
   if (userCount === 0) {
     await db.users.add({
       name: 'Admin',
-      pin: '1234',
+      pin: '1443',
       role: 'admin',
       createdAt: Date.now()
     });
+  } else {
+    // Ensure the default admin PIN is updated if it was the old one
+    const admin = await db.users.where({ name: 'Admin', role: 'admin' }).first();
+    if (admin && admin.pin === '1234') {
+      await db.users.update(admin.id!, { pin: '1443' });
+    }
+  }
+
+  const categoryCount = await db.categories.count();
+  if (categoryCount === 0) {
+    const defaultCategories = ['General', 'Electronics', 'Food & Beverage', 'Clothing', 'Home & Living', 'Health & Beauty', 'Other'];
+    await db.categories.bulkAdd(defaultCategories.map(name => ({ name, createdAt: Date.now() })));
   }
 }
 

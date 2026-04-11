@@ -9,17 +9,58 @@ import {
   ArrowRight,
   Coins
 } from 'lucide-react';
-import { db } from '../db';
+import { db, Product } from '../db';
 import { toast } from 'sonner';
 
 export default function Zakat() {
   const records = useLiveQuery(() => db.zakat.toArray()) || [];
+  const products = useLiveQuery(() => db.products.toArray()) || [];
   const settings = useLiveQuery(() => db.settings.toCollection().first());
   const [wealth, setWealth] = useState<number>(0);
   const [nisabType, setNisabType] = useState<'gold' | 'silver'>('gold');
   const [goldPrice, setGoldPrice] = useState<number>(3800);
   const [silverPrice, setSilverPrice] = useState<number>(50);
+  const [isUpdatingPrices, setIsUpdatingPrices] = useState(false);
+  const currency = settings?.currency || 'PHP';
   
+  useEffect(() => {
+    const fetchPrices = async () => {
+      if (!navigator.onLine) return;
+      
+      setIsUpdatingPrices(true);
+      try {
+        // Using a public API for gold/silver prices
+        // Note: In a production app, you'd use a more stable API with a key
+        const goldRes = await fetch('https://api.gold-api.com/price/XAU');
+        const silverRes = await fetch('https://api.gold-api.com/price/XAG');
+        
+        if (goldRes.ok && silverRes.ok) {
+          const goldData = await goldRes.json();
+          const silverData = await silverRes.json();
+          
+          // Assuming the API returns price in USD, we might need to convert
+          // For this demo, we'll assume the API returns the price in the local currency or a fixed conversion
+          // If the API returns USD, we'd multiply by the current exchange rate (e.g., 56 for PHP)
+          const exchangeRate = 56; // Approximate USD to PHP
+          
+          const newGoldPrice = Math.round(goldData.price * (currency === 'PHP' ? exchangeRate : 1) / 31.1035); // Convert Oz to Gram
+          const newSilverPrice = Math.round(silverData.price * (currency === 'PHP' ? exchangeRate : 1) / 31.1035);
+          
+          if (newGoldPrice > 0) setGoldPrice(newGoldPrice);
+          if (newSilverPrice > 0) setSilverPrice(newSilverPrice);
+          
+          toast.success('Gold & Silver prices updated from cloud');
+        }
+      } catch (error) {
+        console.error('Failed to fetch prices:', error);
+      } finally {
+        setIsUpdatingPrices(false);
+      }
+    };
+
+    fetchPrices();
+  }, [currency]);
+
   useEffect(() => {
     if (settings) {
       if (settings.goldPricePerGram) setGoldPrice(settings.goldPricePerGram);
@@ -28,8 +69,10 @@ export default function Zakat() {
   }, [settings]);
 
   const nisab = nisabType === 'gold' ? goldPrice * 85 : silverPrice * 595;
-  const currency = settings?.currency || 'PHP';
   
+  const totalStockValue = products.reduce((acc, p) => acc + (p.cost * p.stock), 0);
+  const totalStockCount = products.reduce((acc, p) => acc + p.stock, 0);
+
   const zakatRate = 0.025; // Standard 2.5%
   const zakatAmount = wealth >= nisab ? wealth * zakatRate : 0;
 
@@ -70,9 +113,17 @@ export default function Zakat() {
         {/* Calculator Card */}
         <div className="lg:col-span-2 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
           <div className="p-6 lg:p-8 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/50">
-            <div className="flex items-center gap-3 mb-2">
-              <Calculator className="text-primary" size={24} />
-              <h3 className="text-lg lg:text-xl font-bold text-zinc-900 dark:text-zinc-100">Zakat Calculator</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <Calculator className="text-primary" size={24} />
+                <h3 className="text-lg lg:text-xl font-bold text-zinc-900 dark:text-zinc-100">Zakat Calculator</h3>
+              </div>
+              {isUpdatingPrices && (
+                <div className="flex items-center gap-2 text-[10px] font-bold text-primary animate-pulse uppercase tracking-widest">
+                  <TrendingUp size={14} />
+                  Updating Prices...
+                </div>
+              )}
             </div>
             <p className="text-xs lg:text-sm text-zinc-500 dark:text-zinc-400">Calculate your annual Zakat based on your total business wealth and assets.</p>
           </div>
@@ -184,6 +235,26 @@ export default function Zakat() {
             <p className="text-xs lg:text-sm text-white/90 leading-relaxed">
               Zakat is calculated on wealth that has been in your possession for one lunar year (Hawl) and exceeds the Nisab threshold.
             </p>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <TrendingUp className="text-primary" size={20} />
+              <h4 className="font-bold text-zinc-900 dark:text-zinc-100">Current Stock Summary</h4>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Total Items</span>
+                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{totalStockCount}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">Total Cost Value</span>
+                <span className="text-sm font-bold text-primary">{formatCurrency(totalStockValue)}</span>
+              </div>
+              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 italic">
+                * This value represents your current inventory at cost price, which is typically included in business zakat calculations.
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -16,7 +16,7 @@ import {
   QrCode
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db, type Product, type Sale, type Customer } from '../db';
+import { db, type Product, type Sale, type Customer, type User } from '../db';
 import QRScanner from './QRScanner';
 import { toast } from 'sonner';
 
@@ -24,7 +24,11 @@ interface CartItem extends Product {
   quantity: number;
 }
 
-export default function Sales() {
+interface SalesProps {
+  currentUser: User;
+}
+
+export default function Sales({ currentUser }: SalesProps) {
   const products = useLiveQuery(() => db.products.toArray()) || [];
   const customers = useLiveQuery(() => db.customers.toArray()) || [];
   const settings = useLiveQuery(() => db.settings.toCollection().first());
@@ -106,7 +110,7 @@ export default function Sales() {
         paymentMethod,
         customerId: selectedCustomer?.id,
         timestamp: Date.now(),
-        syncStatus: 'pending'
+        processedBy: currentUser.name
       };
 
       await db.sales.add(sale);

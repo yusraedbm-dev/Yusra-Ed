@@ -100,10 +100,6 @@ export default function Login({ onLogin }: LoginProps) {
               <ArrowRight size={28} />
             </button>
           </div>
-
-          <p className="text-center text-[10px] text-zinc-400 dark:text-zinc-500 uppercase font-bold tracking-widest">
-            Default Admin PIN: 1234
-          </p>
         </div>
       </motion.div>
     </div>

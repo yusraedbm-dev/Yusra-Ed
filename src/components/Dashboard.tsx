@@ -183,7 +183,6 @@ export default function Dashboard({ onViewAllTransactions }: { onViewAllTransact
                 <th className="px-6 py-4 font-semibold">Customer</th>
                 <th className="px-6 py-4 font-semibold">Total</th>
                 <th className="px-6 py-4 font-semibold">Method</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -193,13 +192,6 @@ export default function Dashboard({ onViewAllTransactions }: { onViewAllTransact
                   <td className="px-6 py-4 text-sm font-medium text-zinc-900 dark:text-zinc-100">Walk-in Customer</td>
                   <td className="px-6 py-4 text-sm font-bold text-zinc-900 dark:text-zinc-100">{formatCurrency(sale.total)}</td>
                   <td className="px-6 py-4 text-sm text-zinc-500 dark:text-zinc-400 capitalize">{sale.paymentMethod}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tighter ${
-                      sale.syncStatus === 'synced' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-primary/10 text-primary'
-                    }`}>
-                      {sale.syncStatus}
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>

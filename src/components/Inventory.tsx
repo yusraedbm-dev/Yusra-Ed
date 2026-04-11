@@ -21,9 +21,13 @@ import { motion, useDragControls } from 'motion/react';
 export default function Inventory() {
   const dragControls = useDragControls();
   const products = useLiveQuery(() => db.products.toArray()) || [];
+  const categories = useLiveQuery(() => db.categories.toArray()) || [];
   const settings = useLiveQuery(() => db.settings.toCollection().first());
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isAddingStock, setIsAddingStock] = useState(false);
+  const [selectedProductForStock, setSelectedProductForStock] = useState<Product | null>(null);
+  const [stockToAdd, setStockToAdd] = useState<number>(0);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
@@ -82,6 +86,23 @@ export default function Inventory() {
     setIsAddingProduct(true);
   };
 
+  const handleAddStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductForStock || stockToAdd <= 0) return;
+    try {
+      await db.products.update(selectedProductForStock.id!, {
+        stock: selectedProductForStock.stock + stockToAdd,
+        updatedAt: Date.now()
+      });
+      toast.success(`Added ${stockToAdd} to ${selectedProductForStock.name}`);
+      setIsAddingStock(false);
+      setSelectedProductForStock(null);
+      setStockToAdd(0);
+    } catch (error) {
+      toast.error('Failed to add stock');
+    }
+  };
+
   const deleteProduct = async (id: number) => {
     if (confirm('Are you sure you want to delete this product?')) {
       await db.products.delete(id);
@@ -117,6 +138,13 @@ export default function Inventory() {
           >
             <Plus size={18} />
             Add Product
+          </button>
+          <button 
+            onClick={() => setIsAddingStock(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-semibold hover:brightness-110 transition-all shadow-lg shadow-green-600/20"
+          >
+            <Plus size={18} />
+            Add Stock
           </button>
         </div>
       </div>
@@ -210,6 +238,16 @@ export default function Inventory() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
+                        onClick={() => {
+                          setSelectedProductForStock(product);
+                          setIsAddingStock(true);
+                        }}
+                        className="p-2 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg text-zinc-400 hover:text-green-600 dark:hover:text-green-400"
+                        title="Add Stock"
+                      >
+                        <Plus size={16} />
+                      </button>
+                      <button 
                         onClick={() => handleEditProduct(product)}
                         className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                       >
@@ -234,26 +272,80 @@ export default function Inventory() {
         )}
       </div>
 
+      {/* Add Stock Modal */}
+      {isAddingStock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-zinc-200 dark:border-zinc-800"
+          >
+            <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Add Stock</h3>
+              <button onClick={() => { setIsAddingStock(false); setSelectedProductForStock(null); }} className="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleAddStock} className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Select Product</label>
+                <select 
+                  className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                  value={selectedProductForStock?.id || ''}
+                  onChange={(e) => setSelectedProductForStock(products.find(p => p.id === parseInt(e.target.value)) || null)}
+                  required
+                >
+                  <option value="">Select a product...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.stock} in stock)</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Quantity to Add</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                  value={stockToAdd}
+                  onChange={(e) => setStockToAdd(parseInt(e.target.value) || 0)}
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => { setIsAddingStock(false); setSelectedProductForStock(null); }}
+                  className="px-4 py-2 text-zinc-500 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-6 py-2 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary-light"
+                >
+                  Update Stock
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
       {/* Add Product Modal */}
       {isAddingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
           <motion.div 
-            drag
-            dragMomentum={false}
-            dragListener={false}
-            dragControls={dragControls}
-            dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800"
+            className="bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[95vh] flex flex-col overflow-hidden border border-zinc-200 dark:border-zinc-800"
           >
-            {/* Drag Handle Header */}
-            <div 
-              className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center cursor-move bg-zinc-50/50 dark:bg-zinc-800/50 touch-none"
-              onPointerDown={(e) => dragControls.start(e)}
-            >
+            {/* Header */}
+            <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-white dark:bg-zinc-900 z-10">
               <div className="flex items-center gap-3">
-                <GripHorizontal className="text-zinc-400" size={20} />
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                  <Package size={20} />
+                </div>
                 <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
                   {editingProduct ? 'Edit Product' : 'Add New Product'}
                 </h3>
@@ -264,131 +356,196 @@ export default function Inventory() {
                   setEditingProduct(null);
                   setNewProduct({ name: '', sku: '', price: 0, cost: 0, stock: 0, category: 'General', barcode: '' });
                 }} 
-                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-500"
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-500 transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleAddProduct} className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Product Name</label>
-                  <input 
-                    required
-                    type="text" 
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100"
-                    value={newProduct.name}
-                    onChange={e => setNewProduct({...newProduct, name: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">SKU</label>
-                  <input 
-                    required
-                    type="text" 
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100"
-                    value={newProduct.sku}
-                    onChange={e => setNewProduct({...newProduct, sku: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Price ({currency})</label>
-                  <input 
-                    required
-                    type="number" 
-                    step="0.01"
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100"
-                    value={newProduct.price}
-                    onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Cost ({currency})</label>
-                  <input 
-                    required
-                    type="number" 
-                    step="0.01"
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100"
-                    value={newProduct.cost}
-                    onChange={e => setNewProduct({...newProduct, cost: parseFloat(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Product Image</label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 bg-zinc-100 dark:bg-zinc-800 rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center overflow-hidden">
-                      {newProduct.image ? (
-                        <img src={newProduct.image} alt="Preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <Camera size={24} className="text-zinc-400 dark:text-zinc-600" />
-                      )}
+
+            <form onSubmit={handleAddProduct} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                  {/* Form Fields */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Product Name</label>
+                        <input 
+                          required
+                          type="text" 
+                          placeholder="e.g. Gold Necklace"
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all"
+                          value={newProduct.name}
+                          onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">SKU / Model</label>
+                        <input 
+                          required
+                          type="text" 
+                          placeholder="e.g. GN-001"
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all font-mono"
+                          value={newProduct.sku}
+                          onChange={e => setNewProduct({...newProduct, sku: e.target.value})}
+                        />
+                      </div>
                     </div>
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      className="hidden"
-                      id="product-image"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setNewProduct({...newProduct, image: reader.result as string});
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                    />
-                    <label 
-                      htmlFor="product-image"
-                      className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg text-xs font-bold uppercase cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                    >
-                      Upload Photo
-                    </label>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Selling Price ({currency})</label>
+                        <input 
+                          required
+                          type="number" 
+                          step="0.01"
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all font-bold"
+                          value={newProduct.price}
+                          onChange={e => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Cost Price ({currency})</label>
+                        <input 
+                          required
+                          type="number" 
+                          step="0.01"
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all font-bold"
+                          value={newProduct.cost}
+                          onChange={e => setNewProduct({...newProduct, cost: parseFloat(e.target.value) || 0})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Category</label>
+                        <select 
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all font-bold"
+                          value={newProduct.category}
+                          onChange={e => setNewProduct({...newProduct, category: e.target.value})}
+                        >
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Initial Stock</label>
+                        <input 
+                          required
+                          type="number" 
+                          className="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all font-bold"
+                          value={newProduct.stock}
+                          onChange={e => setNewProduct({...newProduct, stock: parseInt(e.target.value) || 0})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Barcode / QR Code</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="Scan or enter code"
+                          className="flex-1 px-4 py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100 transition-all font-mono"
+                          value={newProduct.barcode}
+                          onChange={e => setNewProduct({...newProduct, barcode: e.target.value})}
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setIsScanning(true)}
+                          className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-2xl hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors"
+                        >
+                          <QrCode size={24} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Initial Stock</label>
-                  <input 
-                    required
-                    type="number" 
-                    className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100"
-                    value={newProduct.stock}
-                    onChange={e => setNewProduct({...newProduct, stock: parseInt(e.target.value)})}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Barcode</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      className="flex-1 px-4 py-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:ring-2 focus:ring-primary-light focus:border-primary outline-none text-zinc-900 dark:text-zinc-100"
-                      value={newProduct.barcode}
-                      onChange={e => setNewProduct({...newProduct, barcode: e.target.value})}
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => setIsScanning(true)}
-                      className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400"
-                    >
-                      <QrCode size={20} />
-                    </button>
+
+                  {/* Preview & Image */}
+                  <div className="lg:col-span-5 space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Product Preview</label>
+                      <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 flex flex-col items-center text-center">
+                        <div className="w-32 h-32 bg-white dark:bg-zinc-900 rounded-2xl shadow-inner border border-zinc-100 dark:border-zinc-800 mb-4 flex items-center justify-center overflow-hidden relative group">
+                          {newProduct.image ? (
+                            <img src={newProduct.image} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <Package size={48} className="text-zinc-200 dark:text-zinc-700" />
+                          )}
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            className="hidden"
+                            id="product-image"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setNewProduct({...newProduct, image: reader.result as string});
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          <label 
+                            htmlFor="product-image"
+                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                          >
+                            <Camera className="text-white" size={24} />
+                          </label>
+                        </div>
+                        <div className="w-full">
+                          <div className="text-lg font-black text-zinc-900 dark:text-zinc-100 truncate">
+                            {newProduct.name || 'Product Name'}
+                          </div>
+                          <div className="text-sm font-bold text-primary mt-1">
+                            {formatCurrency(newProduct.price || 0)}
+                          </div>
+                          <div className="mt-4 flex items-center justify-center gap-2">
+                            <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-full text-[10px] font-bold uppercase text-zinc-500">
+                              {newProduct.category}
+                            </span>
+                            <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-full text-[10px] font-bold uppercase text-zinc-500">
+                              {newProduct.stock} Units
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="text-primary mt-0.5" size={18} />
+                        <div className="text-xs text-primary/80 leading-relaxed">
+                          Ensure the <strong>SKU</strong> and <strong>Barcode</strong> are unique to avoid inventory conflicts.
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-3 pt-6">
+
+              {/* Footer */}
+              <div className="p-6 border-t border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col sm:flex-row justify-end gap-3">
                 <button 
                   type="button"
-                  onClick={() => setIsAddingProduct(false)}
-                  className="px-6 py-2 text-zinc-600 dark:text-zinc-400 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                  onClick={() => {
+                    setIsAddingProduct(false);
+                    setEditingProduct(null);
+                    setNewProduct({ name: '', sku: '', price: 0, cost: 0, stock: 0, category: 'General', barcode: '' });
+                  }}
+                  className="px-6 py-3 text-zinc-600 dark:text-zinc-400 font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-2xl transition-colors order-2 sm:order-1"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
-                  className="px-8 py-2 bg-primary text-white font-bold rounded-xl hover:brightness-110 shadow-lg shadow-primary-light transition-all"
+                  className="px-10 py-3 bg-primary text-white font-black rounded-2xl hover:brightness-110 shadow-xl shadow-primary-light transition-all active:scale-95 order-1 sm:order-2"
                 >
-                  Save Product
+                  {editingProduct ? 'Update Product' : 'Create Product'}
                 </button>
               </div>
             </form>
